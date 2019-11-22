@@ -1,16 +1,16 @@
 {
-  "name": "typescript-action",
-  "version": "0.0.0",
+  "name": "valar-action",
+  "version": "0.2.1",
   "private": true,
-  "description": "TypeScript template action",
+  "description": "GitHub Action for Valar",
   "main": "lib/main.js",
   "scripts": {
     "build": "tsc",
-    "test": "jest"
+    "test": "echo \"Error: no test specified\" && exit 0"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/actions/typescript-action.git"
+    "url": "git+https://github.com/valar/action.gitt"
   },
   "keywords": [
     "actions",
@@ -20,14 +20,14 @@
   "author": "YourNameOrOrganization",
   "license": "MIT",
   "dependencies": {
-    "@actions/core": "^1.0.0"
+    "@actions/core": "^1.0.0",
+    "@actions/exec": "^1.0.0",
+    "@actions/tool-cache": "^1.0.0",
+    "semver": "^6.1.1"
   },
   "devDependencies": {
-    "@types/jest": "^24.0.13",
     "@types/node": "^12.0.4",
-    "jest": "^24.8.0",
-    "jest-circus": "^24.7.1",
-    "ts-jest": "^24.0.2",
+    "@types/semver": "^6.0.0",
     "typescript": "^3.5.1"
   }
 }
