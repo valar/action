@@ -10,15 +10,15 @@ import * as tc from '@actions/tool-cache';
 export async function installValar() {
     let arch = process.platform
     if (arch === 'linux') {
-        let toolPath = tc.find('Valar', '0.2.1');
+        let toolPath = tc.find('Valar', '0.4.4');
 
         if (toolPath) {
             core.debug(`Tool found in cache ${toolPath}`);
         } else {
-            let url = "http://github.com/valar/cli/releases/v0.2.1/download/valar_linux_amd64";
+            let url = "http://github.com/valar/cli/releases/v0.4.4/download/valar_linux_amd64";
             let path = await tc.downloadTool(url);
             await exec.exec('chmod', ['+x', path]);
-            toolPath = await tc.cacheFile(path, 'valar', 'Valar', '0.2.1', arch);
+            toolPath = await tc.cacheFile(path, 'valar', 'Valar', '0.4.4', arch);
         }
         core.addPath(toolPath);
     } else {
