@@ -9,6 +9,8 @@ async function run() {
 
   try {
     await installer.installValar();
+    
+    core.debug("Submitting build to Valar ...")
 
     // Wait for build ID
     let buildID = '';
@@ -20,9 +22,13 @@ async function run() {
             stderr: (data: Buffer) => {}
         }
     });
+    
+    core.debug("Submitted build with ID " + buildID);
 
     // Follow build logs
     await exec.exec('valar', ['builds', 'logs', '-f', buildID]);
+    
+    core.debug("Build finished.");
   } catch (error) {
     core.setFailed(error.message);
   }
