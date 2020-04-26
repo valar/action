@@ -1,6 +1,6 @@
 {
   "name": "valar-action",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "private": true,
   "description": "GitHub Action for Valar",
   "main": "lib/main.js",

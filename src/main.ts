@@ -26,12 +26,7 @@ async function run() {
     });
     let buildID = output.trim();
     
-    core.debug("Submitted build with ID " + buildID);
-
-    // Follow build logs
-    await exec.exec('valar', ['builds', 'logs', '-f', buildID]);
-    
-    core.debug("Build finished.");
+    console.log("Submitted build with ID " + buildID);
   } catch (error) {
     core.setFailed(error.message);
   }
