@@ -13,15 +13,16 @@ async function run() {
     core.debug("Submitting build to Valar ...")
 
     // Wait for build ID
-    let buildID = '';
+    let output = '';
     await exec.exec('valar', ['--api-token', APIToken, '--api-endpoint', APIEndpoint, 'push'], {
         listeners: {
             stdout: (data: Buffer) => {
-                buildID += data.toString();
+                output += data.toString();
             },
             stderr: (data: Buffer) => {}
         }
     });
+    let buildID = output.trim();
     
     core.debug("Submitted build with ID " + buildID);
 
