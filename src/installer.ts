@@ -22,6 +22,6 @@ export async function installValar() {
         }
         core.addPath(toolPath);
     } else {
-        throw new Error('@actions/valar-action only supports Ubuntu Linux at this time');
+        throw new Error('valar/action only supports Ubuntu Linux at this time');
     }
 }
