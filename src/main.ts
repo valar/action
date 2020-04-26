@@ -8,7 +8,7 @@ async function run() {
   const APIToken = core.getInput('token', { required: true });
 
   try {
-    await installer.installValar()
+    await installer.installValar();
 
     // Wait for build ID
     let buildID = '';
