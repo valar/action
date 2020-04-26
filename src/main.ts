@@ -10,11 +10,13 @@ async function run() {
   try {
     await installer.installValar();
     
+    core.exportVariable("VALAR_TOKEN", APIToken);
+    core.exportVariable("VALAR_ENDPOINT", APIEndpoint);
     core.debug("Submitting build to Valar ...")
 
     // Wait for build ID
     let output = '';
-    await exec.exec('valar', ['--api-token', APIToken, '--api-endpoint', APIEndpoint, 'push'], {
+    await exec.exec('valar', ['push'], {
         listeners: {
             stdout: (data: Buffer) => {
                 output += data.toString();
