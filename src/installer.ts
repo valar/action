@@ -15,7 +15,7 @@ export async function installValar() {
         if (toolPath) {
             core.debug(`Tool found in cache ${toolPath}`);
         } else {
-            let url = "https://github.com/valar/cli/releases/v1.0.0/download/valar_linux_amd64";
+            let url = "https://github.com/valar/cli/releases/download/v1.0.0/valar_linux_amd64";
             let path = await tc.downloadTool(url);
             await exec.exec('chmod', ['+x', path]);
             toolPath = await tc.cacheFile(path, 'valar', 'Valar', '1.0.0', arch);
