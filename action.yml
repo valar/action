@@ -1,6 +1,13 @@
 name: 'valar-action'
 description: 'GitHub Action for Valar'
 author: 'Valar'
+branding:
+  icon: 'upload-cloud'
+  color: 'red'
+inputs:
+  token:
+    description: 'Valar token
+    required: true
 runs:
   using: 'node12'
   main: 'lib/main.js'
