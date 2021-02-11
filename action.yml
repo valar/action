@@ -6,8 +6,9 @@ branding:
   color: 'red'
 inputs:
   token:
-    description: 'Valar token
+    description: 'Valar token'
     required: true
+
 runs:
   using: 'node12'
   main: 'lib/main.js'
