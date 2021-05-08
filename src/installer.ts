@@ -8,7 +8,7 @@ import * as tc from '@actions/tool-cache';
  * @param {string} version
  */
 
-let toolVersion = '2.0.0';
+let toolVersion = '2.0.1';
 
 export async function installValar() {
     let arch = process.platform
