@@ -4,7 +4,7 @@ import * as installer from './installer';
 
 
 async function run() {
-  const APIEndpoint = "https://api.valar.dev/v1";
+  const APIEndpoint = "https://api.valar.dev/v2";
   const APIToken = core.getInput('token', { required: true });
 
   try {
