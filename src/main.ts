@@ -28,7 +28,11 @@ async function run() {
     
     console.log("Submitted build with ID " + buildID);
   } catch (error) {
-    core.setFailed(error.message);
+      let message
+      if (error instanceof Error) message = error.message
+      else message = String(error)
+    
+      core.setFailed(message);
   }
 }
 
