@@ -1,6 +1,6 @@
 {
   "name": "valar-action",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "private": true,
   "description": "GitHub Action for Valar",
   "main": "lib/main.js",
@@ -20,14 +20,14 @@
   "author": "YourNameOrOrganization",
   "license": "MIT",
   "dependencies": {
-    "@actions/core": "^1.2.6",
-    "@actions/exec": "^1.0.0",
-    "@actions/tool-cache": "^1.0.0",
-    "semver": "^6.1.1"
+    "@actions/core": "^1.6.0",
+    "@actions/exec": "^1.1.1",
+    "@actions/tool-cache": "^1.7.2",
+    "semver": "^7.3.7"
   },
   "devDependencies": {
-    "@types/node": "^12.0.4",
+    "@types/node": "^16.10.5",
     "@types/semver": "^6.0.0",
-    "typescript": "^3.5.1"
+    "typescript": "^4.4.4"
   }
 }

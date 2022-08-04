@@ -8,7 +8,10 @@ inputs:
   token:
     description: 'Valar token'
     required: true
+  workdir:
+    description: 'Path where valar push will be run'
+    required: false
 
 runs:
-  using: 'node12'
+  using: 'node16'
   main: 'lib/main.js'

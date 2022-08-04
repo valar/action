@@ -20,4 +20,5 @@ jobs:
     - uses: valar/action@v1
       with:
         token: ${{ secrets.VALAR_TOKEN }}
+        workdir: ./backebnd
 ```

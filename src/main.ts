@@ -6,6 +6,7 @@ import * as installer from './installer';
 async function run() {
   const APIEndpoint = "https://api.valar.dev/v2";
   const APIToken = core.getInput('token', { required: true });
+  const Workdir = core.getInput('workdir', { required: false });
 
   try {
     await installer.installValar();
@@ -15,20 +16,30 @@ async function run() {
     core.debug("Submitting build to Valar ...")
 
     // Wait for build ID
-    let output = '';
-    await exec.exec('valar', ['push'], {
-        listeners: {
+    const options: exec.ExecOptions = {
+      listeners: {
             stdout: (data: Buffer) => {
                 output += data.toString();
             },
             stderr: (data: Buffer) => {}
         }
-    });
+    };
+
+    if (Workdir) {
+      options.cwd = Workdir
+    }
+
+    let output = '';
+    await exec.exec('valar', ['push'], options);
     let buildID = output.trim();
     
     console.log("Submitted build with ID " + buildID);
   } catch (error) {
-    core.setFailed(error.message);
+      let message
+      if (error instanceof Error) message = error.message
+      else message = String(error)
+    
+      core.setFailed(message);
   }
 }
 
