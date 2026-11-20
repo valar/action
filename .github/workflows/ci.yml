@@ -1,0 +1,32 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: shellcheck scripts/*.sh
+
+  install:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install the default CLI and verify its checksum
+        run: |
+          VALAR_CLI_VERSION=$(sed -n "/cli-version:/,/default:/s/.*default: '\(.*\)'/\1/p" action.yml)
+          export VALAR_CLI_VERSION
+          grep -q "^[0-9a-f]\{64\}  $VALAR_CLI_VERSION/" scripts/checksums.txt
+          scripts/install.sh
+        env:
+          GITHUB_ACTION_PATH: ${{ github.workspace }}
+      - run: valar --version
