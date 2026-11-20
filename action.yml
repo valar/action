@@ -1,17 +1,77 @@
 name: 'valar-action'
-description: 'GitHub Action for Valar'
+description: 'Build and deploy a service on Valar, wait for the result and report its URL'
 author: 'Valar'
 branding:
   icon: 'upload-cloud'
   color: 'red'
 inputs:
   token:
-    description: 'Valar token'
+    description: 'Valar API token; store it as a secret'
     required: true
+  endpoint:
+    description: 'API endpoint of the Valar installation'
+    default: 'https://api.valar.dev/v2'
+  project:
+    description: 'Project to deploy to, instead of the one in .valar.yml'
+    default: ''
+  service:
+    description: 'Service to deploy, instead of the one in .valar.yml'
+    default: ''
   workdir:
-    description: 'Path where valar push will be run'
-    required: false
-
+    description: 'Directory to push; .valar.yml is looked up from here upwards'
+    default: '.'
+  wait:
+    description: 'Wait for the build and deployment, and fail the step if either fails'
+    default: 'true'
+  deploy:
+    description: 'Deploy the build; false only builds, for example to check pull requests'
+    default: 'true'
+  preview:
+    description: 'On pull_request events, deploy to <service>pr<number>, comment its URL, and disable it when the pull request closes'
+    default: 'false'
+  github-token:
+    description: 'Token for the preview comment; needs pull-requests: write'
+    default: '${{ github.token }}'
+  timeout:
+    description: 'How long to wait for the build and deployment together'
+    default: '30m'
+  cli-version:
+    description: 'Valar CLI release to run'
+    default: '4.7.0'
+outputs:
+  build-id:
+    description: 'ID of the build'
+    value: '${{ steps.deploy.outputs.build-id }}'
+  service:
+    description: 'Service that was deployed, empty when it comes from .valar.yml'
+    value: '${{ steps.deploy.outputs.service }}'
+  url:
+    description: 'Preferred URL of the deployed service, empty without a deployment'
+    value: '${{ steps.deploy.outputs.url }}'
 runs:
-  using: 'node16'
-  main: 'lib/main.js'
+  using: 'composite'
+  steps:
+    - name: Install the Valar CLI
+      shell: bash
+      run: '"$GITHUB_ACTION_PATH/scripts/install.sh"'
+      env:
+        VALAR_CLI_VERSION: '${{ inputs.cli-version }}'
+    - name: Deploy to Valar
+      id: deploy
+      shell: bash
+      run: '"$GITHUB_ACTION_PATH/scripts/deploy.sh"'
+      env:
+        INPUT_WORKDIR: '${{ inputs.workdir }}'
+        VALAR_TOKEN: '${{ inputs.token }}'
+        VALAR_ENDPOINT: '${{ inputs.endpoint }}'
+        VALAR_PROJECT: '${{ inputs.project }}'
+        INPUT_SERVICE: '${{ inputs.service }}'
+        INPUT_WAIT: '${{ inputs.wait }}'
+        INPUT_DEPLOY: '${{ inputs.deploy }}'
+        INPUT_PREVIEW: '${{ inputs.preview }}'
+        INPUT_TIMEOUT: '${{ inputs.timeout }}'
+        GH_TOKEN: '${{ inputs.github-token }}'
+        EVENT_NAME: '${{ github.event_name }}'
+        PR_ACTION: '${{ github.event.action }}'
+        PR_NUMBER: '${{ github.event.pull_request.number }}'
+        PR_HEAD_REPO: '${{ github.event.pull_request.head.repo.full_name }}'
