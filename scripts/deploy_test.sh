@@ -7,6 +7,7 @@ root=$(cd "$(dirname "$0")/.." && pwd)
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 failures=0
+token=valar_ut_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
 
 mkdir -p "$tmp/bin" "$tmp/work"
 printf 'project: acme\nservice: web\n' >"$tmp/work/.valar.yml"
@@ -35,7 +36,7 @@ run() {
 	: >"$tmp/log"
 	: >"$tmp/output"
 	out=$(env -i PATH="$tmp/bin:/usr/bin:/bin" HOME="$tmp" STUB_LOG="$tmp/log" \
-		STUB_EXCHANGE=valar_ut_exchanged GITHUB_OUTPUT="$tmp/output" GITHUB_STEP_SUMMARY="$tmp/summary" \
+		STUB_EXCHANGE="$token" GITHUB_OUTPUT="$tmp/output" GITHUB_STEP_SUMMARY="$tmp/summary" \
 		GITHUB_REPOSITORY=acme/web INPUT_WORKDIR="$tmp/work" "$@" bash "$root/scripts/deploy.sh" 2>&1)
 	code=$?
 	seen="$(cat "$tmp/log" "$tmp/output")"$'\n'"$out"
@@ -75,8 +76,8 @@ run VALAR_TOKEN=stored "${oidc[@]}"
 check "token input" 0 "build push --wait --timeout 30m | token=stored" "service url | token=stored" "!auth exchange"
 
 run "${oidc[@]}"
-check "identity token" 0 "auth exchange | token=" "::add-mask::valar_ut_exchanged" \
-	"build push --wait --timeout 30m | token=valar_ut_exchanged" "service url | token=valar_ut_exchanged"
+check "identity token" 0 "auth exchange | token=" "::add-mask::$token" \
+	"build push --wait --timeout 30m | token=$token" "service url | token=$token"
 
 run "${oidc[@]}" INPUT_SERVICE=api INPUT_AUDIENCE=https://valar.example.com
 check "audience" 0 "auth exchange --service api --audience https://valar.example.com" "build push --service api"
@@ -90,11 +91,26 @@ check "refused exchange" 1 "::error::Could not exchange" "!build push"
 run "${oidc[@]}" STUB_EXCHANGE="Manage user and service permissions."
 check "older CLI" 1 "::error::Could not exchange" "!build push" "!::add-mask::"
 
+run "${oidc[@]}" STUB_EXCHANGE="$token"$'\n'"BASH_ENV=/tmp/evil"
+check "two lines" 1 "::error::Could not exchange" "!build push" "!::add-mask::"
+
+run "${oidc[@]}" STUB_EXCHANGE=valar_ut_0123
+check "short token" 1 "::error::Could not exchange" "!build push"
+
+run "${oidc[@]}" GITHUB_EVENT_NAME=pull_request_target
+check "pull_request_target" 1 "::error::pull_request_target runs with" "!auth exchange" "!build push"
+
+run "${oidc[@]}" EVENT_NAME=workflow_run
+check "workflow_run" 1 "::error::workflow_run runs with" "!auth exchange" "!build push"
+
+run VALAR_TOKEN=stored GITHUB_EVENT_NAME=workflow_run
+check "token input on workflow_run" 0 "build push --wait --timeout 30m | token=stored"
+
 run "${oidc[@]}" "${pr[@]}" PR_ACTION=synchronize
 check "preview" 0 "auth exchange --service webpr42 | token=" "build push --service webpr42 --wait" "service=webpr42"
 
 run "${oidc[@]}" "${pr[@]}" PR_ACTION=closed
-check "closed preview" 0 "auth exchange --service webpr42" "service disable --service webpr42 | token=valar_ut_exchanged" "!build push"
+check "closed preview" 0 "auth exchange --service webpr42" "service disable --service webpr42 | token=$token" "!build push"
 
 run "${oidc[@]}" "${pr[@]}" PR_ACTION=reopened GITHUB_REF=refs/pull/7/head PR_NUMBER=
 check "number from ref" 0 "auth exchange --service webpr7" "service enable --service webpr7" "build push --service webpr7"

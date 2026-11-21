@@ -63,15 +63,22 @@ pull_number() {
 # authenticate exchanges the job's GitHub identity token for a Valar token for
 # the service when no token input is given.
 authenticate() {
-	local args=(auth exchange) token
+	local args=(auth exchange) token pattern='^valar_[a-z]{2}_[0-9a-f]{64}$'
+	local event=${GITHUB_EVENT_NAME:-${EVENT_NAME:-}}
 	[ -n "${VALAR_TOKEN:-}" ] && return 0
+	case "$event" in
+	pull_request_target | workflow_run)
+		echo "::error::$event runs with the repository's credentials on code or input from pull requests, so the action exchanges no identity token for it."
+		exit 1
+		;;
+	esac
 	if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]; then
 		echo "::error::The token input is empty: give it a Valar token, or grant the job permissions: id-token: write to deploy under a Valar trust policy."
 		exit 1
 	fi
 	[ -n "$service" ] && args+=(--service "$service")
 	[ -n "${INPUT_AUDIENCE:-}" ] && args+=(--audience "$INPUT_AUDIENCE")
-	if ! token=$(valar "${args[@]}") || [[ $token != valar_* ]]; then
+	if ! token=$(valar "${args[@]}") || ! [[ $token =~ $pattern ]]; then
 		echo "::error::Could not exchange the job's identity token for a Valar token. This needs a trust policy that admits the job (valar trust add) and a Valar CLI with 'valar auth exchange'."
 		exit 1
 	fi

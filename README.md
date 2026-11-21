@@ -119,8 +119,8 @@ valar trust add --project acme --service 'webpr*' --github-repo acme/web --pull-
 ```
 
 * Name the project and service in the inputs, because a closed pull request's run has no checkout to read `.valar.yml` from.
-* Pull requests from forks get no preview: their runs get neither secrets nor identity tokens.
-* Use `pull_request`, never `pull_request_target`, which would deploy a fork's code with your credentials.
+* The action skips pull requests from forks, but don't rely on that check: it runs in the pull request's own copy of the workflow, which a fork can change. Public repositories give fork pull requests no secrets and no identity tokens. A private repository can give them both, through "Send write tokens to workflows from pull requests" and "Send secrets to workflows from pull requests" in its Actions settings. Then a stored token reaches the fork's code. What bounds an identity token is the trust policy: a preview policy admits a pull request only to its own `<service>pr<number>`, and a branch or environment policy pins the subject, the `push` event and the workflow's ref, while a pull request's job carries the `pull_request` event and the pull request's ref.
+* Use `pull_request`, never `pull_request_target`, which would deploy a fork's code with your credentials. Without a `token`, the action refuses to exchange identity tokens in `pull_request_target` and `workflow_run` runs.
 * Disabled previews stop running and answer 503. Valar can't delete services yet, so they remain in `valar service list`.
 * Anyone who can push a branch to the repository can deploy a preview. Under a trust policy, it reaches only `<service>pr<number>` and runs as that preview's own service account. With a stored token, it holds the same token as production deploys; keep previews in a project of their own if that matters.
 
