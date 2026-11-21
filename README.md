@@ -36,7 +36,7 @@ The project, service and build settings come from `.valar.yml`, which `valar ser
 
 | Input | Default | |
 |---|---|---|
-| `token` | | Valar API token. Store it as a repository or environment secret. |
+| `token` | | Valar API token that can only read and deploy in the project (`valar token create --project <project> --scopes read,deploy github-deploy`). Store it as a repository or environment secret. |
 | `endpoint` | `https://api.valar.dev/v2` | API of the Valar installation, for self-hosted Valar. |
 | `project` | from `.valar.yml` | Project to deploy to. |
 | `service` | from `.valar.yml` | Service to deploy. |
