@@ -19,6 +19,9 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     environment:
       name: production
       url: ${{ steps.valar.outputs.url }}
@@ -26,17 +29,39 @@ jobs:
       - uses: actions/checkout@v7
       - id: valar
         uses: valar/action@v3
+```
+
+The project, service and build settings come from `.valar.yml`, which `valar service init` writes. The build log appears in the job log. The URL appears in the job summary and, through `environment.url`, on the commit and its pull request. The `concurrency` group lets one deploy finish before the next starts.
+
+## Deploy without a stored token
+
+Without a `token` input, the action exchanges the job's GitHub identity token for a Valar token that acts as whoever added the trust policy, can only read and deploy the one service, and lasts an hour. The job needs `permissions: id-token: write`, and the project needs a trust policy that admits the job. Someone who manages the project adds it once, with the [Valar CLI](https://github.com/valar/cli) and a token created in the console, here for the workflow above saved as `.github/workflows/deploy.yml`:
+
+```bash
+valar trust add --project acme --service web \
+  --github-repo acme/web --environment production --workflow deploy.yml
+```
+
+The policy pins the repository's and its owner's IDs, the workflow file and the `push` event, so other repositories, workflows and triggers do not match. A job that names an environment, like the one above, gets an identity token for the environment rather than the branch: protect the environment with deployment branch rules (Settings, Environments, production, Deployment branches), because GitHub issues that identity token to every job that names the environment, whatever its branch. A job without an environment needs `--branch main` in place of `--environment production`.
+
+`valar trust list` shows a project's policies and `valar trust remove <id>` deletes one and revokes the tokens it issued. When no policy admits a job, the step fails and its log shows the identity token's claims to compare with `valar trust list`.
+
+The installation must trust GitHub's identity tokens; on a self-hosted one, its operator sets this up. Without that, or to deploy from other CI systems, give the action a stored token instead:
+
+```yaml
+      - uses: valar/action@v3
         with:
           token: ${{ secrets.VALAR_TOKEN }}
 ```
 
-The project, service and build settings come from `.valar.yml`, which `valar service init` writes. The build log appears in the job log. The URL appears in the job summary and, through `environment.url`, on the commit and its pull request. The `concurrency` group lets one deploy finish before the next starts.
+Create the token bound to the project with only `read` and `deploy`, `valar token create github-deploy --project acme --scopes read,deploy`, and store it as a repository or environment secret. It lasts 90 days by default; the job needs no `id-token` permission then.
 
 ## Inputs
 
 | Input | Default | |
 |---|---|---|
-| `token` | | Valar API token that can only read and deploy in the project (`valar token create --project <project> --scopes read,deploy github-deploy`). Store it as a repository or environment secret. |
+| `token` | | Valar API token that can only read and deploy in the project (`valar token create --project <project> --scopes read,deploy github-deploy`), stored as a secret. Without it, the action exchanges the job's GitHub identity token under a trust policy, which needs `permissions: id-token: write`. |
+| `audience` | the endpoint's origin | Audience of that identity token, such as `https://api.valar.dev`. Set it only if the installation's operator configured another one. |
 | `endpoint` | `https://api.valar.dev/v2` | API of the Valar installation, for self-hosted Valar. |
 | `project` | from `.valar.yml` | Project to deploy to. |
 | `service` | from `.valar.yml` | Service to deploy. |
@@ -58,7 +83,7 @@ The project, service and build settings come from `.valar.yml`, which `valar ser
 
 ## Pull request previews
 
-With `preview: true`, a `pull_request` run deploys to the service `<service>pr<number>` instead, for example `webpr42`, and comments its URL on the pull request. When the pull request closes, the preview is disabled; when it reopens, it is enabled and deployed again.
+With `preview: true`, a `pull_request` run deploys to the service `<service>pr<number>` instead, for example `webpr42`, and comments its URL on the pull request. The number comes from the run's ref, `refs/pull/<number>/merge`. When the pull request closes, the preview is disabled; when it reopens, it is enabled and deployed again.
 
 ```yaml
 name: Preview
@@ -72,6 +97,7 @@ concurrency:
 permissions:
   contents: read
   pull-requests: write
+  id-token: write
 
 jobs:
   preview:
@@ -81,17 +107,22 @@ jobs:
         if: github.event.action != 'closed'
       - uses: valar/action@v3
         with:
-          token: ${{ secrets.VALAR_TOKEN }}
           project: acme
           service: web
           preview: true
 ```
 
+The trust policy for previews names the prefix followed by `*`; each pull request may then deploy only its own preview:
+
+```bash
+valar trust add --project acme --service 'webpr*' --github-repo acme/web --pull-requests
+```
+
 * Name the project and service in the inputs, because a closed pull request's run has no checkout to read `.valar.yml` from.
-* Pull requests from forks get no preview: their runs have no access to secrets.
-* Use `pull_request`, never `pull_request_target`, which would deploy a fork's code with your token.
+* Pull requests from forks get no preview: their runs get neither secrets nor identity tokens.
+* Use `pull_request`, never `pull_request_target`, which would deploy a fork's code with your credentials.
 * Disabled previews stop running and answer 503. Valar can't delete services yet, so they remain in `valar service list`.
-* Anyone who can push a branch to the repository can deploy a preview, with the same token as production deploys. Keep previews in a project of their own if that matters.
+* Anyone who can push a branch to the repository can deploy a preview. Under a trust policy, it reaches only `<service>pr<number>` and runs as that preview's own service account. With a stored token, it holds the same token as production deploys; keep previews in a project of their own if that matters.
 
 ## Check that pull requests build
 
@@ -107,6 +138,8 @@ jobs:
           token: ${{ secrets.VALAR_TOKEN }}
           deploy: false
 ```
+
+This check keeps a stored token: a trust policy that admitted pull requests to the service itself would let any of them deploy it, since `deploy: false` is only an input.
 
 ## Several services in one repository
 
@@ -125,9 +158,11 @@ jobs:
           workdir: ${{ matrix.dir }}
 ```
 
+Without a stored token, each service needs a trust policy of its own.
+
 ## Self-hosted Valar
 
-Set `endpoint` to your installation's API, such as `https://api.example.com/v2`.
+Set `endpoint` to your installation's API, such as `https://api.example.com/v2`. Without a `token`, the identity token is requested for the endpoint's origin, `https://api.example.com`, unless `audience` names another.
 
 ## Pinning
 
