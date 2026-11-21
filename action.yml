@@ -37,7 +37,7 @@ inputs:
     default: '30m'
   cli-version:
     description: 'Valar CLI release to run'
-    default: '4.8.1'
+    default: '4.9.0'
 outputs:
   build-id:
     description: 'ID of the build'
