@@ -71,7 +71,7 @@ Create the token bound to the project with only `read` and `deploy`, `valar toke
 | `preview` | `false` | Deploy pull request previews, see below. |
 | `github-token` | `github.token` | Token for the preview comment. |
 | `timeout` | `30m` | How long to wait for the build and the deployment together. |
-| `cli-version` | `4.10.0` | [Valar CLI](https://github.com/valar/cli) release to run. The default release's binaries are verified against checksums in this action. |
+| `cli-version` | `4.11.0` | [Valar CLI](https://github.com/valar/cli) release to run. The default release's binaries are verified against checksums in this action. |
 
 ## Outputs
 
