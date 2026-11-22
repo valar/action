@@ -6,6 +6,7 @@ set -uo pipefail
 service=${INPUT_SERVICE:-}
 preview=
 marker=
+number=
 
 # A closed pull request needs no files: its preview is only disabled.
 if [ "${INPUT_PREVIEW:-false}" != true ] || [ "${PR_ACTION:-}" != closed ]; then
@@ -40,13 +41,49 @@ comment() {
 		echo "::notice::gh is not installed, so the preview URL is not commented on the pull request."
 		return
 	fi
-	id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" --paginate \
+	id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$number/comments" --paginate \
 		--jq ".[] | select(.body | startswith(\"$marker\")) | .id" 2>/dev/null | head -n1)
 	if [ -n "$id" ]; then
 		gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -f body="$body" >/dev/null
 	else
-		gh api "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" -f body="$body" >/dev/null
+		gh api "repos/$GITHUB_REPOSITORY/issues/$number/comments" -f body="$body" >/dev/null
 	fi || echo "::warning::Could not comment on the pull request; the job needs pull-requests: write."
+}
+
+# pull_number prints the pull request's number from GITHUB_REF, which is also
+# the identity token's ref claim that trust policies match previews by.
+pull_number() {
+	if [[ ${GITHUB_REF:-} =~ ^refs/pull/([1-9][0-9]*)/(merge|head)$ ]]; then
+		echo "${BASH_REMATCH[1]}"
+	else
+		echo "${PR_NUMBER:-}"
+	fi
+}
+
+# authenticate exchanges the job's GitHub identity token for a Valar token for
+# the service when no token input is given.
+authenticate() {
+	local args=(auth exchange) token pattern='^valar_[a-z]{2}_[0-9a-f]{64}$'
+	local event=${GITHUB_EVENT_NAME:-${EVENT_NAME:-}}
+	[ -n "${VALAR_TOKEN:-}" ] && return 0
+	case "$event" in
+	pull_request_target | workflow_run)
+		echo "::error::$event runs with the repository's credentials on code or input from pull requests, so the action exchanges no identity token for it."
+		exit 1
+		;;
+	esac
+	if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]; then
+		echo "::error::The token input is empty: give it a Valar token, or grant the job permissions: id-token: write to deploy under a Valar trust policy."
+		exit 1
+	fi
+	[ -n "$service" ] && args+=(--service "$service")
+	[ -n "${INPUT_AUDIENCE:-}" ] && args+=(--audience "$INPUT_AUDIENCE")
+	if ! token=$(valar "${args[@]}") || ! [[ $token =~ $pattern ]]; then
+		echo "::error::Could not exchange the job's identity token for a Valar token. This needs a trust policy that admits the job (valar trust add) and a Valar CLI with 'valar auth exchange'."
+		exit 1
+	fi
+	echo "::add-mask::$token"
+	export VALAR_TOKEN=$token
 }
 
 if [ "${INPUT_PREVIEW:-false}" = true ]; then
@@ -63,10 +100,18 @@ if [ "${INPUT_PREVIEW:-false}" = true ]; then
 		echo "::error::preview: true needs a service, from the service input or .valar.yml."
 		exit 1
 	fi
-	service="${base}pr${PR_NUMBER}"
+	number=$(pull_number)
+	service="${base}pr${number}"
 	preview=$service
 	marker="<!-- valar-preview:$base -->"
 	echo "service=$service" >>"$GITHUB_OUTPUT"
+elif [ -n "$service" ]; then
+	echo "service=$service" >>"$GITHUB_OUTPUT"
+fi
+
+authenticate
+
+if [ -n "$preview" ]; then
 	case "${PR_ACTION:-}" in
 	closed)
 		if valar service disable --service "$service"; then
@@ -82,8 +127,6 @@ if [ "${INPUT_PREVIEW:-false}" = true ]; then
 			echo "::warning::Could not enable preview $service again; deploying anyway."
 		;;
 	esac
-elif [ -n "$service" ]; then
-	echo "service=$service" >>"$GITHUB_OUTPUT"
 fi
 
 args=(build push)

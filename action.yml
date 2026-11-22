@@ -6,8 +6,11 @@ branding:
   color: 'red'
 inputs:
   token:
-    description: 'Valar API token; store it as a secret'
-    required: true
+    description: 'Valar API token; store it as a secret. Without it, the job needs permissions: id-token: write and a Valar trust policy'
+    default: ''
+  audience:
+    description: 'Audience of the GitHub identity token exchanged when no token is given; the endpoint''s origin by default'
+    default: ''
   endpoint:
     description: 'API endpoint of the Valar installation'
     default: 'https://api.valar.dev/v2'
@@ -37,7 +40,7 @@ inputs:
     default: '30m'
   cli-version:
     description: 'Valar CLI release to run'
-    default: '4.10.0'
+    default: '4.11.0'
 outputs:
   build-id:
     description: 'ID of the build'
@@ -65,6 +68,7 @@ runs:
         VALAR_TOKEN: '${{ inputs.token }}'
         VALAR_ENDPOINT: '${{ inputs.endpoint }}'
         VALAR_PROJECT: '${{ inputs.project }}'
+        INPUT_AUDIENCE: '${{ inputs.audience }}'
         INPUT_SERVICE: '${{ inputs.service }}'
         INPUT_WAIT: '${{ inputs.wait }}'
         INPUT_DEPLOY: '${{ inputs.deploy }}'
